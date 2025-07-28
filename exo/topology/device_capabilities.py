@@ -173,54 +173,36 @@ async def mac_device_capabilities() -> DeviceCapabilities:
     flops=CHIP_FLOPS.get(chip_id, DeviceFlops(fp32=0, fp16=0, int8=0))
   )
 
+async def linux_device_capabilities():
+  gpu_total_mem = None
+  gpu_free_mem = None
 
-async def linux_device_capabilities() -> DeviceCapabilities:
-  import psutil
-  from tinygrad import Device
-
-  if DEBUG >= 2: print(f"tinygrad {Device.DEFAULT=}")
-  if Device.DEFAULT == "CUDA" or Device.DEFAULT == "NV" or Device.DEFAULT == "GPU":
-    import pynvml
-
+  try:
     pynvml.nvmlInit()
     handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-    gpu_raw_name = pynvml.nvmlDeviceGetName(handle).upper()
-    gpu_name = gpu_raw_name.rsplit(" ", 1)[0] if gpu_raw_name.endswith("GB") else gpu_raw_name
-    gpu_memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    try:
+      gpu_memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+      gpu_total_mem = gpu_memory_info.total
+      gpu_free_mem = gpu_memory_info.free
+    except pynvml.NVMLError_NotSupported:
+      print("[WARN] NVML: Memory info not supported on this platform (likely Jetson)")
+    except pynvml.NVMLError as e:
+      print(f"[WARN] NVML: Other error fetching memory info: {e}")
+  except pynvml.NVMLError_LibraryNotFound:
+    print("[WARN] NVML: Library not found, skipping GPU info.")
+  except pynvml.NVMLError as e:
+    print(f"[WARN] NVML: Failed to initialize NVML: {e}")
+  finally:
+    try:
+      pynvml.nvmlShutdown()
+    except:
+      pass
 
-    if DEBUG >= 2: print(f"NVIDIA device {gpu_name=} {gpu_memory_info=}")
-
-    pynvml.nvmlShutdown()
-
-    return DeviceCapabilities(
-      model=f"Linux Box ({gpu_name})",
-      chip=gpu_name,
-      memory=gpu_memory_info.total // 2**20,
-      flops=CHIP_FLOPS.get(gpu_name, DeviceFlops(fp32=0, fp16=0, int8=0)),
-    )
-  elif Device.DEFAULT == "AMD":
-    import pyamdgpuinfo
-
-    gpu_raw_info = pyamdgpuinfo.get_gpu(0)
-    gpu_name = gpu_raw_info.name
-    gpu_memory_info = gpu_raw_info.memory_info["vram_size"]
-
-    if DEBUG >= 2: print(f"AMD device {gpu_name=} {gpu_memory_info=}")
-
-    return DeviceCapabilities(
-      model="Linux Box (" + gpu_name + ")",
-      chip=gpu_name,
-      memory=gpu_memory_info // 2**20,
-      flops=CHIP_FLOPS.get(gpu_name, DeviceFlops(fp32=0, fp16=0, int8=0)),
-    )
-
-  else:
-    return DeviceCapabilities(
-      model=f"Linux Box (Device: {Device.DEFAULT})",
-      chip=f"Unknown Chip (Device: {Device.DEFAULT})",
-      memory=psutil.virtual_memory().total // 2**20,
-      flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-    )
+  return {
+    "gpu_total_mem": gpu_total_mem,
+    "gpu_free_mem": gpu_free_mem,
+    # Add other hardware capability fields here if needed
+  }
 
 
 def windows_device_capabilities() -> DeviceCapabilities:
