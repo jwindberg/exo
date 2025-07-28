@@ -2,7 +2,7 @@ import asyncio
 from typing import Optional
 
 from exo.networking.discovery import Discovery
-from exo.networking.connection import NodeConnection
+from exo.networking.node_connection import NodeConnection
 from exo.networking.transport import Transport
 from exo.networking.discovery_result import DiscoveryResult
 
