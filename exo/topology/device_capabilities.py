@@ -5,6 +5,8 @@ import subprocess
 import psutil
 import asyncio
 from exo.helpers import get_mac_system_info, subprocess_pool
+import pynvml
+import platform
 
 TFLOPS = 1.00
 
