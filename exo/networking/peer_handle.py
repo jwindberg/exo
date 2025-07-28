@@ -1,56 +1,37 @@
-from abc import ABC, abstractmethod
-from typing import Optional, Tuple, List
-import numpy as np
-from exo.inference.shard import Shard
-from exo.topology.device_capabilities import DeviceCapabilities
-from exo.topology.topology import Topology
+# exo/networking/peer_handle.py
+
+from typing import Optional
 
 
-class PeerHandle(ABC):
-  @abstractmethod
-  def id(self) -> str:
-    pass
+class PeerHandle:
+    def __init__(self, peer_id, capabilities, other_metadata=None):
+        self.peer_id = peer_id
 
-  @abstractmethod
-  def addr(self) -> str:
-    pass
+        # Safe import to avoid circular import
+        from exo.topology.device_capabilities import DeviceCapabilities
 
-  @abstractmethod
-  def description(self) -> str:
-    pass
+        # Convert dict to DeviceCapabilities if needed
+        if isinstance(capabilities, dict):
+            self.capabilities = DeviceCapabilities(**capabilities)
+        else:
+            self.capabilities = capabilities
 
-  @abstractmethod
-  def device_capabilities(self) -> DeviceCapabilities:
-    pass
+        self.other_metadata = other_metadata or {}
 
-  @abstractmethod
-  async def connect(self) -> None:
-    pass
+    def get_flops_score(self) -> Optional[float]:
+        from exo.topology.device_capabilities import DeviceCapabilities
 
-  @abstractmethod
-  async def is_connected(self) -> bool:
-    pass
+        if isinstance(self.capabilities, DeviceCapabilities):
+            flops = self.capabilities.flops
+            return flops.fp16 + flops.int8 + flops.fp32
+        return None
 
-  @abstractmethod
-  async def disconnect(self) -> None:
-    pass
+    def to_dict(self):
+        return {
+            "peer_id": self.peer_id,
+            "capabilities": self.capabilities.to_dict() if hasattr(self.capabilities, "to_dict") else self.capabilities,
+            "other_metadata": self.other_metadata,
+        }
 
-  @abstractmethod
-  async def health_check(self) -> bool:
-    pass
-
-  @abstractmethod
-  async def send_prompt(self, shard: Shard, prompt: str, request_id: Optional[str] = None) -> Optional[np.array]:
-    pass
-
-  @abstractmethod
-  async def send_tensor(self, shard: Shard, tensor: np.array, request_id: Optional[str] = None) -> Optional[np.array]:
-    pass
-
-  @abstractmethod
-  async def send_result(self, request_id: str, result: List[int], is_finished: bool) -> None:
-    pass
-
-  @abstractmethod
-  async def collect_topology(self, visited: set[str], max_depth: int) -> Topology:
-    pass
+    def __str__(self):
+        return f"<PeerHandle {self.peer_id}: {self.capabilities}>"
