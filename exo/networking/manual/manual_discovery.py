@@ -1,7 +1,6 @@
 import asyncio
 
 from exo.networking.discovery import Discovery
-from exo.networking.discovery_result import DiscoveryResult
 
 
 class ManualDiscovery(Discovery):
@@ -9,7 +8,7 @@ class ManualDiscovery(Discovery):
         self._node = None
         self._cancelled = False
 
-    async def discover(self) -> DiscoveryResult:
+    async def discover(self):
         from exo.topology.device_capabilities import DeviceCapabilities  # moved here to avoid circular import
 
         while not self._cancelled and self._node is None:
@@ -22,10 +21,7 @@ class ManualDiscovery(Discovery):
         if isinstance(capabilities, dict):
             capabilities = DeviceCapabilities(**capabilities)
 
-        return DiscoveryResult(
-            connection=self._node,
-            capabilities=capabilities
-        )
+        return self._node, capabilities
 
     def add_peer(self, connection):
         self._node = connection
