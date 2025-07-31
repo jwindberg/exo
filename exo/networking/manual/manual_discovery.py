@@ -2,18 +2,17 @@ import asyncio
 from typing import Optional
 
 from exo.networking.discovery import Discovery
-from exo.networking.node_connection import NodeConnection
 from exo.networking.transport import Transport
 from exo.networking.discovery_result import DiscoveryResult
 
 
 class ManualDiscovery(Discovery):
     def __init__(self):
-        self._node: Optional[NodeConnection] = None
+        self._node = None
         self._cancelled = False
 
     async def discover(self) -> DiscoveryResult:
-        from exo.topology.device_capabilities import DeviceCapabilities  # moved here
+        from exo.topology.device_capabilities import DeviceCapabilities  # Moved here to avoid circular import
 
         while not self._cancelled and self._node is None:
             await asyncio.sleep(0.5)
@@ -30,7 +29,7 @@ class ManualDiscovery(Discovery):
             capabilities=capabilities
         )
 
-    def add_peer(self, connection: NodeConnection):
+    def add_peer(self, connection):
         self._node = connection
 
     def cancel(self):
