@@ -1,8 +1,6 @@
 import asyncio
-from typing import Optional
 
 from exo.networking.discovery import Discovery
-from exo.networking.transport import Transport
 from exo.networking.discovery_result import DiscoveryResult
 
 
@@ -12,7 +10,7 @@ class ManualDiscovery(Discovery):
         self._cancelled = False
 
     async def discover(self) -> DiscoveryResult:
-        from exo.topology.device_capabilities import DeviceCapabilities  # Moved here to avoid circular import
+        from exo.topology.device_capabilities import DeviceCapabilities  # moved here to avoid circular import
 
         while not self._cancelled and self._node is None:
             await asyncio.sleep(0.5)
