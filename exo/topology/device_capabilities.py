@@ -1,4 +1,4 @@
-async def linux_device_capabilities():
+async def device_capabilities():
   gpu_total_mem = None
   gpu_free_mem = None
 
