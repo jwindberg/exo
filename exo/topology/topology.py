@@ -1,6 +1,8 @@
-from .device_capabilities import DeviceCapabilities
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, TYPE_CHECKING
 from dataclasses import dataclass
+
+if TYPE_CHECKING:
+    from .device_capabilities import DeviceCapabilities
 
 @dataclass
 class PeerConnection:
@@ -9,25 +11,24 @@ class PeerConnection:
   description: Optional[str] = None
 
   def __hash__(self):
-    # Use both from_id and to_id for uniqueness in sets
     return hash((self.from_id, self.to_id))
 
   def __eq__(self, other):
-    if not isinstance(other, PeerConnection):
-      return False
-    # Compare both from_id and to_id for equality
-    return self.from_id == other.from_id and self.to_id == other.to_id
+    return isinstance(other, PeerConnection) and self.from_id == other.from_id and self.to_id == other.to_id
 
 class Topology:
   def __init__(self):
-    self.nodes: Dict[str, DeviceCapabilities] = {}
+    self.nodes: Dict[str, "DeviceCapabilities"] = {}
     self.peer_graph: Dict[str, Set[PeerConnection]] = {}
     self.active_node_id: Optional[str] = None
 
-  def update_node(self, node_id: str, device_capabilities: DeviceCapabilities):
+  def update_node(self, node_id: str, device_capabilities: "DeviceCapabilities"):
+    from .device_capabilities import DeviceCapabilities
+    if isinstance(device_capabilities, dict):
+        device_capabilities = DeviceCapabilities(**device_capabilities)
     self.nodes[node_id] = device_capabilities
 
-  def get_node(self, node_id: str) -> DeviceCapabilities:
+  def get_node(self, node_id: str) -> "DeviceCapabilities":
     return self.nodes.get(node_id)
 
   def all_nodes(self):
@@ -36,16 +37,17 @@ class Topology:
   def add_edge(self, from_id: str, to_id: str, description: Optional[str] = None):
     if from_id not in self.peer_graph:
       self.peer_graph[from_id] = set()
-    conn = PeerConnection(from_id, to_id, description)
-    self.peer_graph[from_id].add(conn)
+    self.peer_graph[from_id].add(PeerConnection(from_id, to_id, description))
 
   def merge(self, peer_node_id: str, other: "Topology"):
     for node_id, capabilities in other.nodes.items():
-      if node_id != peer_node_id: continue
+      if node_id != peer_node_id:
+        continue
       self.update_node(node_id, capabilities)
     for node_id, connections in other.peer_graph.items():
       for conn in connections:
-        if conn.from_id != peer_node_id: continue
+        if conn.from_id != peer_node_id:
+          continue
         self.add_edge(conn.from_id, conn.to_id, conn.description)
 
   def __str__(self):
